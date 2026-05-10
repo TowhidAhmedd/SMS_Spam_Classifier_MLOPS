@@ -1,0 +1,16 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: "spam-classifier-local"
+    static_configs:
+      - targets: ["api:8000"]
+    metrics_path: /metrics
+
+  # Uncomment for Render production monitoring:
+  # - job_name: "spam-classifier-render"
+  #   static_configs:
+  #     - targets: ["your-app.onrender.com"]
+  #   scheme: https
+  #   metrics_path: /metrics
+  

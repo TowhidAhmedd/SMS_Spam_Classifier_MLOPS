@@ -1,0 +1,100 @@
+name: CI — Lint, Test & Docker Build
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    name: Lint + Test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB:       spam_db
+          POSTGRES_USER:     postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL:        postgresql://postgres:postgres@localhost:5432/spam_db
+      MODEL_PATH:          models/spam_classifier.joblib
+      MLFLOW_TRACKING_URI: mlruns
+      SENTRY_DSN:          ""
+      RETRAIN_THRESHOLD:   "50"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Lint with ruff
+        run: ruff check src/ app.py tests/ --ignore E501
+
+      - name: Create dummy model for tests
+        run: |
+          mkdir -p models data
+          python -c "
+          import joblib, json, os
+          from sklearn.pipeline import Pipeline
+          from sklearn.feature_extraction.text import TfidfVectorizer
+          from sklearn.linear_model import LogisticRegression
+          p = Pipeline([('tfidf', TfidfVectorizer()), ('clf', LogisticRegression())])
+          p.fit(['hello world', 'win free money now', 'meeting tomorrow', 'click here prize'], [0, 1, 0, 1])
+          os.makedirs('models', exist_ok=True)
+          joblib.dump(p, 'models/spam_classifier.joblib')
+          json.dump({'accuracy': 0.99, 'f1': 0.99, 'best_f1': 0.99}, open('models/metadata.json','w'))
+          "
+
+      - name: Run tests
+        run: pytest tests/ -v --cov=src --cov=app --cov-report=term-missing
+
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create dummy model
+        run: |
+          mkdir -p models
+          python -c "
+          import joblib, json
+          from sklearn.pipeline import Pipeline
+          from sklearn.feature_extraction.text import TfidfVectorizer
+          from sklearn.linear_model import LogisticRegression
+          p = Pipeline([('tfidf', TfidfVectorizer()), ('clf', LogisticRegression())])
+          p.fit(['hello', 'spam prize'], [0, 1])
+          joblib.dump(p, 'models/spam_classifier.joblib')
+          json.dump({'best_f1': 0.99}, open('models/metadata.json','w'))
+          "
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: spam-classifier:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

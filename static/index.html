@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Email Spam Classifier</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --surface: #1a1d27; --surface2: #222536;
+      --border: #2a2d3a; --accent: #6366f1; --accent2: #818cf8;
+      --spam: #ef4444; --ham: #22c55e; --text: #e2e8f0; --muted: #64748b;
+      --radius: 12px;
+    }
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 1rem; display: flex; flex-direction: column; align-items: center; }
+    header { text-align: center; margin-bottom: 2rem; }
+    header h1 { font-size: 2rem; font-weight: 800; background: linear-gradient(135deg, #6366f1, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    header p { color: var(--muted); margin-top: 0.4rem; font-size: 0.9rem; }
+    .badge { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.6rem; border-radius: 99px; font-size: 0.72rem; font-weight: 600; border: 1px solid; margin: 0.2rem; }
+    .badge.green { border-color: var(--ham); color: var(--ham); }
+    .badge.blue  { border-color: var(--accent2); color: var(--accent2); }
+    .badge.red   { border-color: var(--spam); color: var(--spam); }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; width: 100%; max-width: 720px; margin-bottom: 1.25rem; }
+    .card-title { font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1rem; }
+    textarea { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 0.95rem; padding: 0.85rem 1rem; resize: vertical; min-height: 120px; outline: none; transition: border-color 0.2s; font-family: inherit; }
+    textarea:focus { border-color: var(--accent); }
+    .btn-row { display: flex; gap: 0.6rem; margin-top: 0.85rem; flex-wrap: wrap; }
+    button { padding: 0.6rem 1.2rem; border-radius: 8px; font-size: 0.88rem; font-weight: 600; cursor: pointer; border: none; transition: all 0.18s; font-family: inherit; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--accent2); transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--text); }
+    .btn-sm { padding: 0.35rem 0.8rem; font-size: 0.78rem; }
+
+    /* Result */
+    .result-box { display: none; margin-top: 1.25rem; padding: 1.25rem; border-radius: 10px; border: 1px solid var(--border); }
+    .result-box.spam { border-color: var(--spam); background: rgba(239,68,68,0.07); }
+    .result-box.ham  { border-color: var(--ham);  background: rgba(34,197,94,0.07); }
+    .result-label { font-size: 1.5rem; font-weight: 800; }
+    .result-box.spam .result-label { color: var(--spam); }
+    .result-box.ham  .result-label { color: var(--ham); }
+    .bar-wrap { margin-top: 0.85rem; }
+    .bar-labels { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--muted); margin-bottom: 0.35rem; }
+    .bar-track { height: 8px; background: var(--border); border-radius: 99px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 99px; transition: width 0.5s ease; }
+    .spam .bar-fill { background: var(--spam); }
+    .ham  .bar-fill { background: var(--ham); }
+    .meta-row { display: flex; gap: 1rem; margin-top: 0.75rem; flex-wrap: wrap; }
+    .meta-item { font-size: 0.78rem; color: var(--muted); }
+    .meta-item span { color: var(--text); font-weight: 600; }
+
+    /* Feedback */
+    .feedback-row { display: flex; gap: 0.5rem; margin-top: 0.85rem; align-items: center; }
+    .feedback-row p { font-size: 0.82rem; color: var(--muted); }
+    .btn-feedback { padding: 0.3rem 0.75rem; border-radius: 6px; font-size: 0.78rem; }
+    .btn-correct   { background: rgba(34,197,94,0.15); color: var(--ham); border: 1px solid var(--ham); }
+    .btn-incorrect { background: rgba(239,68,68,0.15); color: var(--spam); border: 1px solid var(--spam); }
+
+    /* Examples */
+    .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .chip { padding: 0.3rem 0.75rem; border-radius: 99px; font-size: 0.75rem; cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: inherit; transition: all 0.15s; }
+    .chip.spam-chip:hover { border-color: var(--spam); color: var(--spam); }
+    .chip.ham-chip:hover  { border-color: var(--ham);  color: var(--ham); }
+
+    /* Metrics */
+    .metrics-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 0.6rem; }
+    .metric-cell { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.65rem; text-align: center; }
+    .metric-cell .val { font-size: 1.2rem; font-weight: 700; color: var(--accent2); }
+    .metric-cell .key { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.2rem; }
+
+    /* Stats */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 0.6rem; }
+    .stat-cell { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.65rem; }
+    .stat-cell .sv { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+    .stat-cell .sk { font-size: 0.68rem; color: var(--muted); margin-top: 0.15rem; }
+
+    .loader { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 5px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; }
+    .dot-ok  { background: var(--ham); }
+    .dot-err { background: var(--spam); }
+    footer { color: var(--muted); font-size: 0.75rem; text-align: center; margin-top: 1rem; }
+    footer a { color: var(--accent2); text-decoration: none; }
+    .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 0.65rem 1rem; font-size: 0.82rem; color: var(--text); opacity: 0; transform: translateY(10px); transition: all 0.3s; pointer-events: none; z-index: 99; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>📧 Email Spam Classifier</h1>
+  <p id="healthBadge">Checking status…</p>
+  <div style="margin-top:0.5rem">
+    <span class="badge blue">TF-IDF + Logistic Regression</span>
+    <span class="badge blue">MLflow</span>
+    <span class="badge blue">PostgreSQL</span>
+    <span class="badge green">Live on Render</span>
+  </div>
+</header>
+
+<!-- Classifier -->
+<div class="card">
+  <div class="card-title">Classify Email</div>
+  <textarea id="emailText" placeholder="Paste your email text here… (Ctrl+Enter to classify)"></textarea>
+  <div class="btn-row">
+    <button class="btn-primary" id="classifyBtn" onclick="classify()">🔍 Classify</button>
+    <button class="btn-ghost" onclick="clearAll()">Clear</button>
+  </div>
+
+  <div class="result-box" id="resultBox">
+    <div class="result-label" id="resultLabel"></div>
+    <div class="bar-wrap">
+      <div class="bar-labels"><span>Spam Probability</span><span id="spamPct"></span></div>
+      <div class="bar-track"><div class="bar-fill" id="barFill" style="width:0%"></div></div>
+    </div>
+    <div class="meta-row">
+      <div class="meta-item">Confidence: <span id="metaConf"></span></div>
+      <div class="meta-item">Latency: <span id="metaTime"></span></div>
+    </div>
+    <div class="feedback-row">
+      <p>Was this correct?</p>
+      <button class="btn-feedback btn-correct btn-sm" onclick="sendFeedback(true)">✅ Yes</button>
+      <button class="btn-feedback btn-incorrect btn-sm" onclick="sendFeedback(false)">❌ No</button>
+    </div>
+  </div>
+</div>
+
+<!-- Examples -->
+<div class="card">
+  <div class="card-title">Try Examples</div>
+  <div class="chips" id="chipContainer"></div>
+</div>
+
+<!-- Model Metrics -->
+<div class="card">
+  <div class="card-title">Model Performance</div>
+  <div class="metrics-grid" id="metricsGrid"><div style="color:var(--muted);font-size:.83rem">Loading…</div></div>
+</div>
+
+<!-- Feedback Stats -->
+<div class="card">
+  <div class="card-title">Feedback & Retraining</div>
+  <div class="stats-grid" id="statsGrid"><div style="color:var(--muted);font-size:.83rem">Loading…</div></div>
+</div>
+
+<footer>
+  <a href="/docs">Swagger Docs</a> · <a href="/redoc">ReDoc</a> · <a href="/metrics">Prometheus Metrics</a>
+  <br/>Built with FastAPI · scikit-learn · MLflow · PostgreSQL · Prometheus · Sentry · Render
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const EXAMPLES = {
+  spam: [
+    "WINNER!! Selected for $1,000 gift card. Call now!",
+    "Free entry to win FA Cup Final tickets! Text FA to 87121",
+    "URGENT: Your account suspended. Verify now: bit.ly/xxxx",
+    "Congratulations! You've won a Nokia. Claim at www.prize.com",
+  ],
+  ham: [
+    "Are we still on for lunch tomorrow at 1pm?",
+    "Please review the Q3 report before Thursday's meeting.",
+    "Your Amazon order has shipped and arrives by Friday.",
+    "Don't forget — dentist appointment at 3pm today.",
+  ],
+};
+
+let lastPrediction = null;
+
+// Build example chips
+const chips = document.getElementById("chipContainer");
+EXAMPLES.spam.forEach(t => {
+  const c = document.createElement("button");
+  c.className = "chip spam-chip";
+  c.textContent = "🚨 " + t.slice(0, 38) + "…";
+  c.onclick = () => { document.getElementById("emailText").value = t; };
+  chips.appendChild(c);
+});
+EXAMPLES.ham.forEach(t => {
+  const c = document.createElement("button");
+  c.className = "chip ham-chip";
+  c.textContent = "✅ " + t.slice(0, 38) + "…";
+  c.onclick = () => { document.getElementById("emailText").value = t; };
+  chips.appendChild(c);
+});
+
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 3000);
+}
+
+async function checkHealth() {
+  const badge = document.getElementById("healthBadge");
+  try {
+    const r = await fetch("/health");
+    const d = await r.json();
+    const ok = d.model_loaded;
+    badge.innerHTML = `<span class="status-dot ${ok ? 'dot-ok' : 'dot-err'}"></span>${ok ? 'API Online · Model Ready · PostgreSQL Connected' : 'Model not loaded'}`;
+  } catch {
+    badge.innerHTML = `<span class="status-dot dot-err"></span>API Offline`;
+  }
+}
+
+async function loadMetrics() {
+  const grid = document.getElementById("metricsGrid");
+  try {
+    const r = await fetch("/model/info");
+    if (!r.ok) { grid.innerHTML = `<span style="color:var(--muted);font-size:.83rem">Train model to see metrics.</span>`; return; }
+    const d = await r.json();
+    const keys = ["accuracy", "precision", "recall", "f1", "roc_auc"];
+    grid.innerHTML = keys.filter(k => d[k] !== undefined).map(k => `
+      <div class="metric-cell">
+        <div class="val">${(d[k]*100).toFixed(1)}%</div>
+        <div class="key">${k.replace("_"," ")}</div>
+      </div>`).join("");
+  } catch { grid.innerHTML = `<span style="color:var(--muted)">Could not load metrics.</span>`; }
+}
+
+async function loadStats() {
+  const grid = document.getElementById("statsGrid");
+  try {
+    const r = await fetch("/feedback/stats");
+    const d = await r.json();
+    grid.innerHTML = `
+      <div class="stat-cell"><div class="sv">${d.total_feedback}</div><div class="sk">Total Feedback</div></div>
+      <div class="stat-cell"><div class="sv">${d.wrong_predictions}</div><div class="sk">Wrong Predictions</div></div>
+      <div class="stat-cell"><div class="sv">${d.accuracy_from_feedback !== null ? (d.accuracy_from_feedback*100).toFixed(1)+'%' : 'N/A'}</div><div class="sk">User Accuracy</div></div>
+      <div class="stat-cell"><div class="sv">${d.retraining_in}</div><div class="sk">Until Retrain</div></div>
+      <div class="stat-cell"><div class="sv">${d.database}</div><div class="sk">Database</div></div>
+      <div class="stat-cell"><div class="sv">${d.last_retrain ? d.last_retrain.slice(0,10) : 'Never'}</div><div class="sk">Last Retrain</div></div>
+    `;
+  } catch { grid.innerHTML = `<span style="color:var(--muted)">Could not load stats.</span>`; }
+}
+
+async function classify() {
+  const text = document.getElementById("emailText").value.trim();
+  if (!text) return;
+
+  const btn = document.getElementById("classifyBtn");
+  btn.innerHTML = `<span class="loader"></span>Classifying…`;
+  btn.disabled = true;
+  document.getElementById("resultBox").style.display = "none";
+
+  try {
+    const res = await fetch("/predict", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "API error");
+
+    const p = data.prediction;
+    lastPrediction = { text, predicted: p.label, confidence: p.confidence };
+
+    const box = document.getElementById("resultBox");
+    box.className = `result-box ${p.label}`;
+    document.getElementById("resultLabel").textContent = p.is_spam ? "🚨 SPAM" : "✅ HAM (Legitimate)";
+    document.getElementById("spamPct").textContent = (p.spam_probability * 100).toFixed(1) + "%";
+    document.getElementById("barFill").style.width = (p.spam_probability * 100) + "%";
+    document.getElementById("metaConf").textContent = (p.confidence * 100).toFixed(1) + "%";
+    document.getElementById("metaTime").textContent = data.processing_time_ms + " ms";
+    box.style.display = "block";
+  } catch (e) {
+    showToast("Error: " + e.message);
+  } finally {
+    btn.innerHTML = "🔍 Classify";
+    btn.disabled = false;
+  }
+}
+
+async function sendFeedback(correct) {
+  if (!lastPrediction) return;
+  let true_label = null;
+  if (!correct) {
+    true_label = lastPrediction.predicted === "spam" ? "ham" : "spam";
+  }
+  try {
+    await fetch("/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: lastPrediction.text,
+        predicted: lastPrediction.predicted,
+        correct,
+        true_label,
+        confidence: lastPrediction.confidence,
+      }),
+    });
+    showToast(correct ? "✅ Thanks for confirming!" : "📝 Feedback saved — will improve the model!");
+    loadStats();
+  } catch {
+    showToast("Could not save feedback.");
+  }
+}
+
+function clearAll() {
+  document.getElementById("emailText").value = "";
+  document.getElementById("resultBox").style.display = "none";
+  lastPrediction = null;
+}
+
+document.getElementById("emailText").addEventListener("keydown", e => {
+  if (e.ctrlKey && e.key === "Enter") classify();
+});
+
+checkHealth();
+loadMetrics();
+loadStats();
+</script>
+</body>
+</html>

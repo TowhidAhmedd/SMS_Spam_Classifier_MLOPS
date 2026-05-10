@@ -1,0 +1,26 @@
+__pycache__/
+*.pyc
+.env
+.venv/
+venv/
+2.env
+.env.*
+# Data
+data/spam.csv
+data/*.zip
+*.key
+*.pem
+.env.example
+# MLflow
+mlruns/
+
+# Test artifacts
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+.ruff_cache/
+
+# IDE
+.vscode/
+.idea/
