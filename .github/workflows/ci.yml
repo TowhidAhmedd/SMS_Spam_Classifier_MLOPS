@@ -1,7 +1,7 @@
 
 
 
-cat > /home/claude/Spam_prediction/.github/workflows/ci.yml << 'EOF'
+# cat > /home/claude/Spam_prediction/.github/workflows/ci.yml << 'EOF'
 name: CI/CD — Lint, Test, Docker Build & Deploy to Render
 
 on:
