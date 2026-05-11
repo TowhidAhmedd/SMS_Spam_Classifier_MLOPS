@@ -43,8 +43,13 @@ jobs:
           python-version: "3.11"
           cache: pip
 
+      # - name: Install dependencies
+      #   run: pip install -r requirements-dev.txt
       - name: Install dependencies
-        run: pip install -r requirements-dev.txt
+        run: |
+          pip install joblib scikit-learn
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
 
       - name: Lint with ruff
         run: ruff check src/ app.py tests/ --ignore E501
