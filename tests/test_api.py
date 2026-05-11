@@ -1,8 +1,8 @@
 """API integration tests."""
+from unittest.mock import MagicMock, patch
+
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock
-import numpy as np
 
 MOCK_SPAM = {"label": "spam", "is_spam": True,  "spam_probability": 0.95, "ham_probability": 0.05, "confidence": 0.95}
 MOCK_HAM  = {"label": "ham",  "is_spam": False, "spam_probability": 0.03, "ham_probability": 0.97, "confidence": 0.97}

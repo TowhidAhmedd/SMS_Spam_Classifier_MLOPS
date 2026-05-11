@@ -3,27 +3,35 @@ Training pipeline with MLflow experiment tracking.
 Supports both local mlruns/ and remote DagsHub tracking.
 Run: python src/train.py
 """
-import os
 import json
 import logging
+import os
+
+import joblib
 import mlflow
 import mlflow.sklearn
 import pandas as pd
-from sklearn.model_selection import train_test_split
+from dotenv import load_dotenv
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
+    f1_score,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+)
+from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline
-from sklearn.metrics import (
-    accuracy_score, precision_score, recall_score,
-    f1_score, roc_auc_score, confusion_matrix, classification_report
-)
-import joblib
-from dotenv import load_dotenv
+
+from src.config import get_settings
 
 load_dotenv()
 
-from src.config import get_settings
+
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)

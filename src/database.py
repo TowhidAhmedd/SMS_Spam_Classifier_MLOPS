@@ -3,14 +3,12 @@ PostgreSQL database setup using SQLAlchemy.
 Handles connection pooling, table creation, and session management.
 """
 import logging
-from datetime import datetime
-from sqlalchemy import (
-    create_engine, Column, Integer, Text, Boolean,
-    DateTime, String, Float, func
-)
-from sqlalchemy.orm import declarative_base, sessionmaker, Session
-from sqlalchemy.exc import SQLAlchemyError
 from contextlib import contextmanager
+from datetime import datetime
+
+from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String, Text, create_engine, func
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 from src.config import get_settings
 
@@ -123,13 +121,13 @@ def save_feedback_db(
 
 
 def get_wrong_count(db: Session) -> int:
-    return db.query(func.count(Feedback.id)).filter(Feedback.correct == False).scalar()
+    return db.query(func.count(Feedback.id)).filter(Feedback.correct is False).scalar()
 
 
 def get_feedback_stats_db(db: Session) -> dict:
     total   = db.query(func.count(Feedback.id)).scalar() or 0
-    correct = db.query(func.count(Feedback.id)).filter(Feedback.correct == True).scalar() or 0
-    wrong   = db.query(func.count(Feedback.id)).filter(Feedback.correct == False).scalar() or 0
+    correct = db.query(func.count(Feedback.id)).filter(Feedback.correct is True).scalar() or 0
+    wrong   = db.query(func.count(Feedback.id)).filter(Feedback.correct is False).scalar() or 0
     last    = db.query(RetrainLog).order_by(RetrainLog.id.desc()).first()
 
     return {
@@ -183,6 +181,6 @@ def save_retrain_log_db(
 def get_wrong_samples(db: Session):
     """Return wrong predictions with user corrections for retraining."""
     return db.query(Feedback).filter(
-        Feedback.correct == False,
+        Feedback.correct is False,
         Feedback.true_label.isnot(None)
     ).all()

@@ -2,17 +2,21 @@
 Feedback loop + auto-retraining pipeline.
 Uses PostgreSQL for persistent storage on Render.
 """
-import os
 import json
 import logging
+import os
 import threading
 from typing import Optional
 
 from src.config import get_settings
 from src.database import (
-    get_db, save_feedback_db, get_wrong_count,
-    get_feedback_stats_db, save_retrain_log_db,
-    get_wrong_samples, log_prediction_db
+    get_db,
+    get_feedback_stats_db,
+    get_wrong_count,
+    get_wrong_samples,
+    log_prediction_db,
+    save_feedback_db,
+    save_retrain_log_db,
 )
 from src.metrics import track_retrain
 
@@ -68,13 +72,13 @@ def retrain_from_feedback():
     """
     track_retrain()
     try:
-        import pandas as pd
         import joblib
-        from sklearn.pipeline import Pipeline
+        import pandas as pd
         from sklearn.feature_extraction.text import TfidfVectorizer
         from sklearn.linear_model import LogisticRegression
         from sklearn.metrics import f1_score
         from sklearn.model_selection import train_test_split
+        from sklearn.pipeline import Pipeline
 
         logger.info("Retraining started...")
 

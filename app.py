@@ -2,29 +2,31 @@
 Email Spam Classifier — Production FastAPI Application
 Full MLOps: FastAPI + PostgreSQL + MLflow + Prometheus + Sentry + Feedback Loop
 """
-import os
 import json
-import time
 import logging
+import os
+import time
 from contextlib import asynccontextmanager
 from typing import List, Optional
 
 import sentry_sdk
-from fastapi import FastAPI, HTTPException, Request
+from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field, field_validator
-from dotenv import load_dotenv
 
 from src.config import get_settings
 from src.database import init_db
-from src.model import load_model, predict, predict_single
+from src.feedback import get_feedback_stats, log_prediction, save_feedback
 from src.metrics import (
-    prometheus_middleware, metrics_response,
-    track_prediction, track_feedback, set_model_loaded
+    metrics_response,
+    prometheus_middleware,
+    set_model_loaded,
+    track_feedback,
+    track_prediction,
 )
-from src.feedback import save_feedback, get_feedback_stats, log_prediction
-
+from src.model import load_model, predict, predict_single
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")

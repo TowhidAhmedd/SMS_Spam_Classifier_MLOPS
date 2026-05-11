@@ -2,8 +2,8 @@
 Model inference module.
 Loads trained pipeline once and caches it in memory.
 """
-import os
 import logging
+import os
 from functools import lru_cache
 from typing import List
 

@@ -2,10 +2,11 @@
 Download SMS Spam Collection dataset from UCI ML Repository.
 Run: python src/download_data.py
 """
+import logging
 import os
 import urllib.request
 import zipfile
-import logging
+
 import pandas as pd
 
 logging.basicConfig(level=logging.INFO)
