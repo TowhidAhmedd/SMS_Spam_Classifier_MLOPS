@@ -16,8 +16,6 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field, field_validator
 from dotenv import load_dotenv
 
-load_dotenv()
-
 from src.config import get_settings
 from src.database import init_db
 from src.model import load_model, predict, predict_single
@@ -27,6 +25,8 @@ from src.metrics import (
 )
 from src.feedback import save_feedback, get_feedback_stats, log_prediction
 
+
+load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
